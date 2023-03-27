@@ -122,8 +122,8 @@ async def callback(sink: discord.sinks, ctx):
         if user_id == ctx.author.id:
             audio: discord.sinks.core.AudioData = audio
             print(user_id)
-            filepath = os.path.join("recordings", f"user_{user_id}.wav")
-            with open(filepath, "wb") as f:
+            filepath = os.path.join("recordings", f"{ctx.author}.wav")
+            with open(filepath, "ab") as f:
                 f.write(audio.file.getvalue())
 
 # stops recording
@@ -134,5 +134,48 @@ async def stop(ctx):
         await ctx.send("stopped recording")
     else:
         await ctx.send("not in a voice channel")
+
+@bot.command()
+async def train(ctx):
+    in_path = os.path.join("recordings", f"{ctx.author}.wav")
+    audio_length = get_audio_length_seconds(in_path)
+    if os.path.exists(in_path):
+        if audio_length >= 300:
+            out_path = os.path.join("recordings", f"{ctx.author}")
+            split_audio_file(in_path, out_path, 10000)
+            train_voice_model(ctx.author, out_path)
+        else:
+            await ctx.send(f"You do not have enough audio recorded. You currently have {audio_length} seconds recorded out of 300.")
+    else:
+        await ctx.send("There is no audio data recorded for you. Please try using the `!listen` and `stop` commands to record training data for yourself. You must have at least 300 seconds of audio data.")
+
+def split_audio_file(input_file, output_dir, chunk_length=10000):
+    # Load the audio file
+    audio = AudioSegment.from_wav(input_file)
+
+    # Calculate the number of chunks
+    n_chunks = (len(audio) // chunk_length) + (1 if len(audio) % chunk_length > 0 else 0)
+
+    # Create the output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Split the audio and save the chunks
+    for i in range(n_chunks):
+        start_time = i * chunk_length
+        end_time = (i + 1) * chunk_length
+        chunk = audio[start_time:end_time]
+        chunk.export(os.path.join(output_dir, f"chunk_{i}.wav"), format="wav")
+        print(f"Saved chunk {i} to {output_dir}/chunk_{i}.wav")
+
+def get_audio_length_seconds(input_file):
+    audio = AudioSegment.from_wav(input_file)
+    return len(audio)/1000
+
+def train_voice_model(name, rec_dir):
+    print("Voice training not implemented.")
+
+input_file = "path/to/your/input.wav"
+output_dir = "path/to/output/directory"
+split_audio_file(input_file, output_dir)
 
 bot.run(DISCORD_TOKEN)
