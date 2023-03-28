@@ -1,5 +1,6 @@
 import os
 import openai
+from resemble import Resemble
 import discord
 import random
 from discord.ext import commands
@@ -11,6 +12,7 @@ from datetime import datetime, timedelta
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+RESEMBLE_API_KEY = os.getenv("RESEMBLE_API_KEY")
 
 intents = discord.Intents.default()
 intents.typing = False
@@ -23,6 +25,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Set up OpenAI API
 openai.api_key = OPENAI_API_KEY
+# Set up Resemble API
+Resemble.api_key(RESEMBLE_API_KEY)
 
 
 async def fetch_gpt4_response(prompt):
