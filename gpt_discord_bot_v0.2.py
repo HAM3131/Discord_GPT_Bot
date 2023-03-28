@@ -1,6 +1,6 @@
 import os
 import openai
-import whisper
+# import whisper
 from resemble import Resemble
 import discord
 import random
@@ -28,7 +28,7 @@ openai.api_key = OPENAI_API_KEY
 # Set up Resemble API
 Resemble.api_key(RESEMBLE_API_KEY)
 # Set up Whisper model
-model = whisper.load_model("base")
+# model = whisper.load_model("base")
 
 
 async def fetch_gpt4_response(prompt):
@@ -69,7 +69,6 @@ async def on_message(message):
     chance = random.random()
     respond = chance < thresh or (bot.user.mentioned_in(message) and message.channel.name != "general")
     print(f"{formatted_timestamp} - Message received. Chance = {chance}   Response = {respond}")
-
 
     if respond:
         directive = """---------------------------------
@@ -125,10 +124,10 @@ async def listen(ctx):
 
 async def callback(sink: discord.sinks, ctx):
     for user_id, audio in sink.audio_data.items():
-        if user_id == ctx.author.id:
+        # if user_id == ctx.author.id:           I don't think this line is necessary, but I'm not sure. Will need to test with multiple people in the channel.
             audio: discord.sinks.core.AudioData = audio
             print(user_id)
-            filepath = os.path.join("recordings", f"{ctx.author}.wav")
+            filepath = os.path.join("recordings", f"{ctx.author.id}.wav")
             with open(filepath, "ab") as f:
                 f.write(audio.file.getvalue())
 
@@ -143,7 +142,7 @@ async def stop(ctx):
 
 @bot.command()
 async def train(ctx):
-    in_path = os.path.join("recordings", f"{ctx.author}.wav")
+    in_path = os.path.join("recordings", f"{ctx.author.id}.wav")
     audio_length = get_audio_length_seconds(in_path)
     if os.path.exists(in_path):
         if audio_length >= 300:
@@ -196,8 +195,6 @@ def train_voice_model(name, rec_dir):
     return voice_uuid
 
 
-
-
 def upload_recordings(uuid, rec_dir):
     # Delete all currently uploaded recordings
     response = Resemble.v2.recordings.all(uuid, 1, 1000)
@@ -212,8 +209,9 @@ def upload_recordings(uuid, rec_dir):
         rec_path = os.path.join(rec_dir, f'chunk_{i}.wav')
         transcript_path = os.path.join(rec_dir, f'chunk_{i}.txt')
         name = f'recording_{i}'
-        whisper_data = model.transcribe(rec_dir)
-        text = whisper_data['text']
+        # whisper_data = model.transcribe(rec_dir)
+        # text = whisper_data['text']
+        text = "test"
         is_active = True
         emotion = 'neutral' # must find emotion of the voice being transcribed
         with open(rec_path, 'rb') as file:
