@@ -1,13 +1,13 @@
 import os
 import openai
+import whisper
 from resemble import Resemble
 import discord
 import random
 from discord.ext import commands
 from dotenv import load_dotenv
 from pydub import AudioSegment
-import asyncio
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -27,6 +27,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 openai.api_key = OPENAI_API_KEY
 # Set up Resemble API
 Resemble.api_key(RESEMBLE_API_KEY)
+# Set up Whisper model
+model = whisper.load_model("base")
 
 
 async def fetch_gpt4_response(prompt):
@@ -175,8 +177,45 @@ def get_audio_length_seconds(input_file):
     audio = AudioSegment.from_wav(input_file)
     return len(audio)/1000
 
+def count_files_in_directory(directory_path):
+    try:
+        with os.scandir(directory_path) as entries:
+            return sum(entry.is_file() for entry in entries)
+    except FileNotFoundError:
+        print(f"The directory '{directory_path}' does not exist.")
+        return 0
+
 def train_voice_model(name, rec_dir):
-    print("Voice training not implemented.")
+    response = Resemble.v2.voices.create(name)
+    voice = response['item']
+    voice_uuid = voice['uuid']
+
+    upload_recordings(voice_uuid, rec_dir)
+
+
+def upload_recordings(uuid, rec_dir):
+    # Delete all currently uploaded recordings
+    response = Resemble.v2.recordings.all(uuid, 1, 1000)
+    recordings = response['items']
+    for recording in recordings:
+        recording_uuid = recording['uuid']
+        response = Resemble.v2.recordings.delete(uuid, recording_uuid)
+
+    # Add all of the recordings saved in the given directory
+    recordings = count_files_in_directory(rec_dir)
+    for i in range(recordings):
+        rec_path = os.path.join(rec_dir, f'chunk_{i}.wav')
+        transcript_path = os.path.join(rec_dir, f'chunk_{i}.txt')
+        name = f'recording_{i}'
+        whisper_data = model.transcribe(rec_dir)
+        text = whisper_data['text']
+        is_active = True
+        emotion = 'neutral' # must find emotion of the voice being transcribed
+        with open(rec_path, 'rb') as file:
+            response = Resemble.v2.recordings.create(uuid, file, name, text, is_active, emotion)
+            recording = response['item']
+        with open(transcript_path, 'w+') as file:
+            file.write(text)
 
 input_file = "path/to/your/input.wav"
 output_dir = "path/to/output/directory"
