@@ -149,7 +149,8 @@ async def train(ctx):
         if audio_length >= 300:
             out_path = os.path.join("recordings", f"{ctx.author}")
             split_audio_file(in_path, out_path, 10000)
-            train_voice_model(ctx.author, out_path)
+            uuid = train_voice_model(ctx.author, out_path)
+            await ctx.send(f"A voice model has been trained for {ctx.author} with the id `{uuid}`")
         else:
             await ctx.send(f"You do not have enough audio recorded. You currently have {audio_length} seconds recorded out of 300.")
     else:
@@ -191,6 +192,10 @@ def train_voice_model(name, rec_dir):
     voice_uuid = voice['uuid']
 
     upload_recordings(voice_uuid, rec_dir)
+    response = Resemble.v2.voices.build(voice_uuid)
+    return voice_uuid
+
+
 
 
 def upload_recordings(uuid, rec_dir):
@@ -216,9 +221,5 @@ def upload_recordings(uuid, rec_dir):
             recording = response['item']
         with open(transcript_path, 'w+') as file:
             file.write(text)
-
-input_file = "path/to/your/input.wav"
-output_dir = "path/to/output/directory"
-split_audio_file(input_file, output_dir)
 
 bot.run(DISCORD_TOKEN)
